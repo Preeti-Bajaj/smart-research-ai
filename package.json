@@ -6,14 +6,19 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "next lint"
   },
   "dependencies": {
+    "@langchain/community": "^1.1.29",
+    "@langchain/core": "^1.2.0",
+    "@langchain/google-genai": "^2.2.0",
+    "@langchain/textsplitters": "^1.0.1",
     "ai": "^6.0.208",
     "convex": "^1.41.0",
+    "langchain": "^1.5.0",
     "next": "16.2.9",
-    "pdf-parse": "^2.4.5",
-    "pdfjs-dist": "^6.0.227",
+    "pdf-parse": "^1.1.1",
+    "pdfjs-dist": "^3.11.174",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-dropzone": "^15.0.0",
@@ -23,7 +28,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^20.19.43",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",

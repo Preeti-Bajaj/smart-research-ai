@@ -51,25 +51,30 @@ export default defineSchema({
     .index("byUser", ["createdBy"])
     .index("byFileId", ["fileId"]),
 
-  // =====================================================
-  // VECTOR DOCUMENTS (RAG ENGINE)
-  // =====================================================
-  documents: defineTable({
-    embedding: v.array(v.number()),
+// =====================================================
+// VECTOR DOCUMENTS (RAG ENGINE)
+// =====================================================
 
-    text: v.string(),
+documents: defineTable({
+  fileId: v.string(),
 
-    metadata: v.object({
-      fileId: v.string(),
+  embedding: v.array(v.number()),
 
-      pageNumber: v.optional(v.number()),
+  text: v.string(),
 
-      chunkIndex: v.optional(v.number()),
-    }),
-  }).vectorIndex("byEmbedding", {
-    vectorField: "embedding",
-    dimensions: 3072,
+  metadata: v.object({
+    pageNumber: v.optional(v.number()),
+    chunkIndex: v.optional(v.number()),
   }),
+})
+  .index("byFileId", ["fileId"])
+  .vectorIndex("byEmbedding", {
+    vectorField: "embedding",
+    dimensions: 768,
+    filterFields: ["fileId"],
+  }),
+
+
 
   // =====================================================
   // CHAT HISTORY

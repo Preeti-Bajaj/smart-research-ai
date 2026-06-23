@@ -9,6 +9,8 @@
  */
 
 import type * as fileStorage from "../fileStorage.js";
+import type * as ingest from "../ingest.js";
+import type * as search from "../search.js";
 
 import type {
   ApiFromModules,
@@ -18,6 +20,8 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   fileStorage: typeof fileStorage;
+  ingest: typeof ingest;
+  search: typeof search;
 }>;
 
 /**

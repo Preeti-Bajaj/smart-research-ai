@@ -2,7 +2,8 @@
 
 import { useState, useRef } from "react";
 import { useMutation } from "convex/react";
-import { api } from "../../../convex/_generated/api";
+import { api } from "../../../convex/_generated/api"; // <-- Verify this path (changed to ../../)
+import { Id } from "../../../convex/_generated/dataModel"; // <-- Added this import
 
 export default function PdfUpload() {
   const generateUploadUrl = useMutation(api.fileStorage.generateUploadUrl);
@@ -14,14 +15,12 @@ export default function PdfUpload() {
   const [description, setDescription] = useState("");
   const [tags, setTags] = useState("");
   
-  // Ref to clear the input after upload or on error
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       
-      // Fix 1: Clear state if file type is invalid
       if (selectedFile.type !== "application/pdf") {
         setFile(null);
         setStatusMessage("Please select a valid PDF file.");
@@ -29,7 +28,6 @@ export default function PdfUpload() {
         return;
       }
       
-      // Fix 2: Clear state if file is oversized (10MB)
       if (selectedFile.size > 10 * 1024 * 1024) {
         setFile(null);
         setStatusMessage("File must be smaller than 10MB");
@@ -74,29 +72,44 @@ export default function PdfUpload() {
 
       setStatusMessage("Saving metadata...");
 
-      await addPdfFile({
+      const addResult = await addPdfFile({
         fileName: file.name,
-        storageId: storageId,
-        createdBy: "demo-user@example.com", // TODO: Replace with actual user email from Auth
+        storageId: storageId as Id<"_storage">, // <-- Cast the ID perfectly for TypeScript
+        createdBy: "demo-user@example.com", 
         fileId: newFileId,
         description: description || undefined,
         tags: parsedTags.length > 0 ? parsedTags : undefined,
       });
 
-      // Fix 3: Accurate success message
-      setStatusMessage("Upload complete! Metadata saved successfully.");
+      if (!addResult?.fileUrl) {
+        throw new Error("File URL generation failed. Cannot proceed with AI processing.");
+      }
+
+      setStatusMessage("Extracting document intelligence...");
+
+      const apiResponse = await fetch("/api/pdf-loader", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          fileUrl: addResult.fileUrl, 
+          fileId: newFileId,
+        }),
+      });
+
+      if (!apiResponse.ok) {
+        const errorText = await apiResponse.text();
+        throw new Error(`Pipeline Error: ${errorText}`);
+      }
+
+      setStatusMessage("Upload complete! Document is processing in the background.");
       
-      // Reset form and clear the DOM input
       setFile(null);
       setDescription("");
       setTags("");
       if (fileInputRef.current) fileInputRef.current.value = "";
 
-      // TODO: router.push(`/chat/${newFileId}`);
-
     } catch (error) {
       console.error("Upload error:", error);
-      // Upgraded Error Message Handling
       setStatusMessage(
         error instanceof Error ? error.message : "An unknown error occurred during upload"
       );
@@ -120,17 +133,17 @@ export default function PdfUpload() {
             onChange={handleFileChange}
             className="hidden"
             id="pdf-upload"
-            ref={fileInputRef} // Attached the ref here
+            ref={fileInputRef} 
             disabled={isUploading}
           />
           <label
             htmlFor="pdf-upload"
-            className="cursor-pointer flex flex-col items-center"
+            className="cursor-pointer flex flex-col items-center w-full"
           >
             <svg className="w-8 h-8 text-gray-400 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
             </svg>
-            <span className="text-sm font-medium text-blue-600 hover:text-blue-500">
+            <span className="text-sm font-medium text-blue-600 hover:text-blue-500 text-center px-4">
               {file ? file.name : "Click to select a PDF"}
             </span>
             <span className="text-xs text-gray-500 mt-1">Maximum file size: 10MB</span>
@@ -169,7 +182,7 @@ export default function PdfUpload() {
         )}
 
         {statusMessage && (
-          <div className={`text-sm p-3 rounded-md ${statusMessage.includes("error") || statusMessage.includes("valid") || statusMessage.includes("smaller") ? "bg-red-50 text-red-700" : "bg-blue-50 text-blue-700"}`}>
+          <div className={`text-sm p-3 rounded-md transition-colors ${statusMessage.toLowerCase().includes("error") || statusMessage.includes("valid") || statusMessage.includes("smaller") || statusMessage.includes("failed") ? "bg-red-50 text-red-700 border border-red-200" : "bg-blue-50 text-blue-700 border border-blue-200"}`}>
             {statusMessage}
           </div>
         )}
@@ -179,9 +192,15 @@ export default function PdfUpload() {
           disabled={!file || isUploading}
           className={`w-full py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white 
             ${!file || isUploading ? "bg-blue-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"} 
-            transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
+            transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 flex justify-center items-center gap-2`}
         >
-          {isUploading ? "Uploading..." : "Upload Document"}
+          {isUploading && (
+            <svg className="animate-spin h-4 w-4 text-white" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            </svg>
+          )}
+          {isUploading ? "Processing Upload..." : "Upload Document"}
         </button>
       </div>
     </div>
